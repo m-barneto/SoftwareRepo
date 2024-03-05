@@ -1,0 +1,5 @@
+MSI Bios API
+https://www.msi.com/api/v1/product/support/panel?product=MPG-Z790-EDGE-WIFI&type=bios
+
+Asus Bios API
+https://rog.asus.com/support/webapi/product/GetPDBIOS?website=us&model=rog-strix-x670e-e-gaming-wifi&pdid=0&m1id=20994&cpu=&LevelTagId=204967&systemCode=rog

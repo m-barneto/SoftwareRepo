@@ -2,6 +2,7 @@
 
 namespace BiosDownloader {
     internal class MoboManager {
+        #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public class Asus {
             public class EcCustomize {
                 public bool status { get; set; }
@@ -80,6 +81,7 @@ namespace BiosDownloader {
                 public string response { get; set; }
             }
         }
+        #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
 
         public enum Manufacturer {
             MSI,
@@ -96,15 +98,15 @@ namespace BiosDownloader {
         private Msi.Root msi;
         private Asus.Root asus;
 
-        public MoboManager() {
-            if (!File.Exists(MSI_JSON_PATH)) {
+        public MoboManager(bool forceUpdate = true) {
+            if (forceUpdate || !File.Exists(MSI_JSON_PATH)) {
                 Console.WriteLine("Fetching MSI motherboards from api.");
                 msi = JsonConvert.DeserializeObject<Msi.Root>(GetJsonData(MSI_MOBO_URL).Result)!;
 
                 File.WriteAllText(MSI_JSON_PATH, JsonConvert.SerializeObject(msi, Formatting.Indented));
             } else msi = JsonConvert.DeserializeObject<Msi.Root>(File.ReadAllText(MSI_JSON_PATH))!;
 
-            if (!File.Exists(ASUS_JSON_PATH)) {
+            if (forceUpdate || !File.Exists(ASUS_JSON_PATH)) {
                 Console.WriteLine("Fetching Asus motherboards from api.");
                 asus = JsonConvert.DeserializeObject<Asus.Root>(GetJsonData(ASUS_MOBO_URL).Result)!;
                 File.WriteAllText(ASUS_JSON_PATH, JsonConvert.SerializeObject(asus, Formatting.Indented));
@@ -165,16 +167,59 @@ namespace BiosDownloader {
             return null;
         }
 
-        public async Task<string> GetJsonData(string url) {
+        public static async Task<string> GetJsonData(string url) {
             return await new HttpClient().GetStringAsync(url);
         }
 
         public List<Msi.GetProductList> GetMsiMotherboards() {
-            return msi.result.getProductList;
+            List<Msi.GetProductList> motherboards = new List<Msi.GetProductList>();
+            // Remove invalid results
+            // 18957 TPM 2.0 Module
+            // 234531 xx (Mobo that was removed from site?)
+            foreach (var mobo in msi.result.getProductList) {
+                if (mobo.id == 18957) continue;
+                if (mobo.id == 234531) continue;
+                motherboards.Add(mobo);
+            }
+            return motherboards;
         }
 
         public List<Asus.Sku> GetAsusMotherboards() {
             return asus.result.skus;
+        }
+
+
+        private static readonly List<string> INTEL_CHIPSETS = [ 
+            "Z690",
+            "W680",
+            "Q670",
+            "H670",
+            "B660",
+            "H610",
+            "R680",
+            "Q670",
+            "H610",
+            "Z790",
+            "H770",
+            "B760",
+        ];
+        private static readonly List<string> AMD_CHIPSETS = [
+            "A620",
+            "B650",
+            "X670",
+        ];
+        public static string? GetChipset(string moboName) {
+            moboName = moboName.Trim().ToUpper();
+
+            foreach (string cs in INTEL_CHIPSETS) {
+                if (moboName.Contains(cs)) return cs;
+            }
+
+            foreach (string cs in AMD_CHIPSETS) {
+                if (moboName.Contains(cs)) return cs;
+            }
+
+            return null;
         }
     }
 }
